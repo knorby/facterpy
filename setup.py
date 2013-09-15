@@ -3,6 +3,9 @@ import os
 from setuptools import setup, find_packages
 
 VERSION = "0.1"
+DESCRIPTION = ("Python library to provide a cached and"
+               "dictionary-like interface to Puppet's facter utility")
+
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -10,6 +13,8 @@ def read(fname):
 setup(
     name = "facterpy",
     version = VERSION,
+    description = DESCRIPTION,
+    long_description = read('README.md'),
     packages = find_packages(),
     author = "Kali Norby",
     author_email = "kali.norby@gmail.com",
