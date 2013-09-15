@@ -2,6 +2,7 @@ import os
 import subprocess
 import warnings
 
+import six
 try:
     import yaml
 except ImportError:
@@ -57,6 +58,7 @@ class Facter(object):
                 return parsed_results[key]
             else:
                 return parsed_results
+        results = results.decode()
         if key is not None:
             return results.strip()
         else:
@@ -76,9 +78,12 @@ class Facter(object):
             self.build_cache()
         return True
 
-    def lookup(self, fact, skip_cache=False):
-        if skip_cache or not self.has_cache():
-            return self.run_facter(fact)
+    def lookup(self, fact, cache=True):
+        if (not cache) or (not self.has_cache()):
+            val =  self.run_facter(fact)
+            if val is None or val == '':
+                raise KeyError(fact)
+            return val
         return self._cache[fact]
     
     def get(self, k, d=None):
@@ -93,14 +98,23 @@ class Facter(object):
             return self.run_facter()
         return self._cache
 
+    def iterkeys(self):
+        return six.iterkeys(self.all)
+
     def keys(self):
         return self.all.keys()
 
+    def iterkeys(self):
+        return six.iterkeys(self.all)
+    
     def values(self):
         return self.all.values()
 
     def iteritems(self):
-        return self.all.iteritems()
+        return six.iteritems(self.all)
+
+    def items(self):
+        return self.all.items()
 
     def __getitem__(self, key):
         return self.lookup(key)
