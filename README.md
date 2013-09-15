@@ -27,3 +27,36 @@ Usage
 >>> f.get("not a fact", "mere opinion")
 'mere opinion'
 ```
+
+Install
+---------
+
+```
+pip install facter
+```
+
+or 
+
+```
+pip install facter[yaml]
+```
+
+to include pyYAML
+
+Requirements
+-------------
+
+Required:
+
+- facter - must be installed through system packages or Ruby Gems
+- [six](https://pypi.python.org/pypi/six/) - Python 2 and 3 compatibility (marked in setup.py)
+
+Optional:
+
+- [pyYAML](http://pyyaml.org/wiki/PyYAML) - For YAML parsing of results
+
+
+Project State
+--------------
+
+This is an alpha/early version and it hasn't been tested much. Please report any issues observed.
