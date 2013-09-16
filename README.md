@@ -28,6 +28,8 @@ Usage
 'mere opinion'
 ```
 
+More methods exist. Documentation to come.
+
 Install
 ---------
 
@@ -60,3 +62,4 @@ Project State
 --------------
 
 This is an alpha/early version and it hasn't been tested much. Please report any issues observed.
+
