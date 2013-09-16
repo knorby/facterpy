@@ -3,7 +3,7 @@ import os
 from setuptools import setup, find_packages
 
 VERSION = "0.1"
-DESCRIPTION = ("Python library to provide a cached and"
+DESCRIPTION = ("Python library to provide a cached and "
                "dictionary-like interface to Puppet's facter utility")
 
 
