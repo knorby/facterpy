@@ -167,4 +167,7 @@ class Facter(object):
         return json.dumps(self.all)
         
             
-    
+_FACTER = Facter()
+
+def get_fact(fact, default=None):
+    return _FACTER.get(fact, default)
