@@ -73,7 +73,8 @@ class Facter(object):
         #this seems to not cause problems, but leaving it separate
         args.append("--puppet")
         if self.external_dir is not None:
-            args.append('--external_dir {0}'.format(self.external_dir))
+            args.append('--external-dir')
+            args.append(self.external_dir)
         if self.uses_yaml:
             args.append("--yaml")
         if key is not None:
