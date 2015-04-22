@@ -50,18 +50,19 @@ def _parse_cli_facter_results(facter_results):
 
 class Facter(object):
 
-    def __init__(self, facter_path="facter",
+    def __init__(self, facter_path="facter", external_dir=None,
                  use_yaml=True, cache_enabled=True):
         self.facter_path = facter_path
+        self.external_dir = external_dir
         self._use_yaml = use_yaml
         self.cache_enabled = cache_enabled
         self._cache = None
-        
+
     @property
     def uses_yaml(self):
         """Determines if the yaml library is available and selected"""
         return self._use_yaml and bool(yaml)
-        
+
     def run_facter(self, key=None):
         """Run the facter executable with an optional specfic
         fact. Output is parsed to yaml if available and
@@ -71,6 +72,9 @@ class Facter(object):
         args = [self.facter_path]
         #this seems to not cause problems, but leaving it separate
         args.append("--puppet")
+        if self.external_dir is not None:
+            args.append('--external-dir')
+            args.append(self.external_dir)
         if self.uses_yaml:
             args.append("--yaml")
         if key is not None:
@@ -117,7 +121,7 @@ class Facter(object):
                 raise KeyError(fact)
             return val
         return self._cache[fact]
-    
+
     def get(self, k, d=None):
         """Dictionary-like `get` method with a default value"""
         try:
@@ -140,7 +144,7 @@ class Facter(object):
 
     def iterkeys(self):
         return six.iterkeys(self.all)
-    
+
     def values(self):
         return self.all.values()
 
@@ -160,13 +164,13 @@ class Facter(object):
         return ('<Facter yaml=%r cache_enabled=%r cache_active=%r>'
                 % (self.uses_yaml, self.cache_enabled,
                    (self._cache is not None)))
-    
+
     def json(self):
         """Return a json dump of all facts"""
         import json
         return json.dumps(self.all)
-        
-            
+
+
 _FACTER = Facter()
 
 def get_fact(fact, default=None):
