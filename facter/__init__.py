@@ -82,7 +82,7 @@ class Facter(object):
         proc = subprocess.Popen(args, stdout=subprocess.PIPE)
         results = proc.stdout.read()
         if self.uses_yaml:
-            parsed_results = yaml.load(results)
+            parsed_results = yaml.safe_load(results)
             if key is not None:
                 return parsed_results[key]
             else:
