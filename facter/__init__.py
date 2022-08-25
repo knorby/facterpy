@@ -51,11 +51,12 @@ def _parse_cli_facter_results(facter_results):
 class Facter(object):
 
     def __init__(self, facter_path="facter", external_dir=None,
-                 use_yaml=True, cache_enabled=True):
+                 use_yaml=True, cache_enabled=True, get_puppet_facts=False):
         self.facter_path = facter_path
         self.external_dir = external_dir
         self._use_yaml = use_yaml
         self.cache_enabled = cache_enabled
+        self._get_puppet_facts = get_puppet_facts
         self._cache = None
 
     @property
@@ -70,8 +71,11 @@ class Facter(object):
         dictionary if no key is given, and the value if a key is
         passed."""
         args = [self.facter_path]
-        #this seems to not cause problems, but leaving it separate
-        args.append("--puppet")
+        # getting puppet facts seems to be writing data to the home directory of
+        # the run time user even when cache is not selected.
+        # The only additonal fact that we can get as of now is `puppetversion.`
+        if self._get_puppet_facts:
+            args.append("--puppet")
         if self.external_dir is not None:
             args.append('--external-dir')
             args.append(self.external_dir)
