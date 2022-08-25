@@ -73,7 +73,8 @@ class Facter(object):
         args = [self.facter_path]
         # getting puppet facts seems to be writing data to the home directory of
         # the run time user even when cache is not selected.
-        # The only additonal fact that we can get as of now is `puppetversion.`
+        # The only additional fact that we can get as of now is `puppetversion.`
+        # that is available using puppet.version fact.
         if self._get_puppet_facts:
             args.append("--puppet")
         if self.external_dir is not None:
