@@ -37,7 +37,7 @@ Install
 pip install facter
 ```
 
-or 
+or
 
 ```
 pip install facter[yaml]
@@ -61,5 +61,5 @@ Optional:
 Project State
 --------------
 
-This is an alpha/early version and it hasn't been tested much. Please report any issues observed.
+This package has been in use for quite a while now. Please report any issues observed.
 
