@@ -8,9 +8,12 @@ try:
     import yaml
 except ImportError:
     logging.warning("PyYAML not available, falling back to plain text parsing")
-    yaml = None
+    yaml = None  # type: ignore[assignment]
 
-def _parse_cli_facter_results(facter_results: str) -> Generator[Tuple[str, str], None, None]:
+
+def _parse_cli_facter_results(
+    facter_results: str,
+) -> Generator[Tuple[str, str], None, None]:
     '''Parse key value pairs printed with "=>" separators.
     YAML is preferred output scheme for facter.
 
@@ -35,7 +38,7 @@ def _parse_cli_facter_results(facter_results: str) -> Generator[Tuple[str, str],
     last_key, last_value = None, []
     for line in filter(None, facter_results.splitlines()):
         res = line.split(" => ", 1)
-        if len(res)==1:
+        if len(res) == 1:
             if not last_key:
                 raise ValueError("parse error")
             else:
@@ -50,7 +53,6 @@ def _parse_cli_facter_results(facter_results: str) -> Generator[Tuple[str, str],
 
 
 class Facter:
-
     def __init__(
         self,
         facter_path: str = "facter",
@@ -85,7 +87,7 @@ class Facter:
         if self._get_puppet_facts:
             args.append("--puppet")
         if self.external_dir is not None:
-            args.append('--external-dir')
+            args.append("--external-dir")
             args.append(self.external_dir)
         if self.uses_yaml:
             args.append("--yaml")
@@ -95,14 +97,13 @@ class Facter:
         stdout, stderr = proc.communicate()
         if proc.returncode != 0:
             raise RuntimeError(f"facter command failed: {stderr.decode()}")
-        results = stdout
+        results = stdout.decode()
         if self.uses_yaml:
             parsed_results = yaml.safe_load(results)
             if key is not None:
                 return parsed_results[key]
             else:
                 return parsed_results
-        results = results.decode()
         if key is not None:
             return results.strip()
         else:
@@ -182,6 +183,7 @@ class Facter:
 
 
 _FACTER = Facter()
+
 
 def get_fact(fact: str, default: Any = None) -> Any:
     return _FACTER.get(fact, default)

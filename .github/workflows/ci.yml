@@ -15,31 +15,31 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Install facter
       run: |
         sudo apt-get update
         sudo apt-get install -y facter
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -e .[dev,yaml]
-    
+
     - name: Lint with ruff
       run: ruff check .
-    
+
     - name: Check formatting with black
       run: black --check .
-    
+
     - name: Type check with mypy
       run: mypy facter/
-    
+
     - name: Test with pytest
       run: pytest
 

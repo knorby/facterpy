@@ -34,7 +34,7 @@ dependencies = []
 yaml = ["PyYAML"]
 dev = [
     "black",
-    "ruff", 
+    "ruff",
     "mypy",
     "pytest",
     "pytest-cov",
