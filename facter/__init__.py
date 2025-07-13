@@ -1,15 +1,16 @@
+import json
+import logging
 import os
 import subprocess
-import warnings
+from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple, Union
 
-import six
 try:
     import yaml
 except ImportError:
-    warnings.warn("no yaml module loaded", ImportWarning)
+    logging.warning("PyYAML not available, falling back to plain text parsing")
     yaml = None
 
-def _parse_cli_facter_results(facter_results):
+def _parse_cli_facter_results(facter_results: str) -> Generator[Tuple[str, str], None, None]:
     '''Parse key value pairs printed with "=>" separators.
     YAML is preferred output scheme for facter.
 
@@ -33,7 +34,7 @@ def _parse_cli_facter_results(facter_results):
     '''
     last_key, last_value = None, []
     for line in filter(None, facter_results.splitlines()):
-        res = line.split(six.u(" => "), 1)
+        res = line.split(" => ", 1)
         if len(res)==1:
             if not last_key:
                 raise ValueError("parse error")
@@ -48,23 +49,29 @@ def _parse_cli_facter_results(facter_results):
             yield last_key, os.linesep.join(last_value)
 
 
-class Facter(object):
+class Facter:
 
-    def __init__(self, facter_path="facter", external_dir=None,
-                 use_yaml=True, cache_enabled=True, get_puppet_facts=False):
+    def __init__(
+        self,
+        facter_path: str = "facter",
+        external_dir: Optional[str] = None,
+        use_yaml: bool = True,
+        cache_enabled: bool = True,
+        get_puppet_facts: bool = False,
+    ) -> None:
         self.facter_path = facter_path
         self.external_dir = external_dir
         self._use_yaml = use_yaml
         self.cache_enabled = cache_enabled
         self._get_puppet_facts = get_puppet_facts
-        self._cache = None
+        self._cache: Optional[Dict[str, Any]] = None
 
     @property
-    def uses_yaml(self):
+    def uses_yaml(self) -> bool:
         """Determines if the yaml library is available and selected"""
         return self._use_yaml and bool(yaml)
 
-    def run_facter(self, key=None):
+    def run_facter(self, key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
         """Run the facter executable with an optional specfic
         fact. Output is parsed to yaml if available and
         selected. Puppet facts are always selected. Returns a
@@ -84,8 +91,11 @@ class Facter(object):
             args.append("--yaml")
         if key is not None:
             args.append(key)
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        results = proc.stdout.read()
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if proc.returncode != 0:
+            raise RuntimeError(f"facter command failed: {stderr.decode()}")
+        results = stdout
         if self.uses_yaml:
             parsed_results = yaml.safe_load(results)
             if key is not None:
@@ -98,15 +108,15 @@ class Facter(object):
         else:
             return dict(_parse_cli_facter_results(results))
 
-    def build_cache(self):
+    def build_cache(self) -> None:
         """run facter and save the results to `_cache`"""
         cache = self.run_facter()
-        self._cache = cache
+        self._cache = cache if isinstance(cache, dict) else {}
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         self._cache = None
 
-    def has_cache(self):
+    def has_cache(self) -> bool:
         """Intended to be called before any call that might access the
         cache. If the cache is not selected, then returns False,
         otherwise the cache is build if needed and returns True."""
@@ -116,18 +126,20 @@ class Facter(object):
             self.build_cache()
         return True
 
-    def lookup(self, fact, cache=True):
+    def lookup(self, fact: str, cache: bool = True) -> Any:
         """Return the value of a given fact and raise a KeyError if
         it is not available. If `cache` is False, force the lookup of
         the fact."""
         if (not cache) or (not self.has_cache()):
-            val =  self.run_facter(fact)
-            if val is None or val == '':
+            val = self.run_facter(fact)
+            if val is None or val == "":
                 raise KeyError(fact)
             return val
+        if self._cache is None:
+            raise RuntimeError("Cache is None but has_cache returned True")
         return self._cache[fact]
 
-    def get(self, k, d=None):
+    def get(self, k: str, d: Any = None) -> Any:
         """Dictionary-like `get` method with a default value"""
         try:
             return self.lookup(k)
@@ -135,48 +147,41 @@ class Facter(object):
             return d
 
     @property
-    def all(self):
+    def all(self) -> Dict[str, Any]:
         """Dictionary representation of all facts"""
         if not self.has_cache():
-            return self.run_facter()
-        return self._cache
+            result = self.run_facter()
+            return result if isinstance(result, dict) else {}
+        return self._cache or {}
 
-    def iterkeys(self):
-        return six.iterkeys(self.all)
+    def keys(self) -> Iterator[str]:
+        return iter(self.all.keys())
 
-    def keys(self):
-        return self.all.keys()
+    def values(self) -> Iterator[Any]:
+        return iter(self.all.values())
 
-    def iterkeys(self):
-        return six.iterkeys(self.all)
+    def items(self) -> Iterator[Tuple[str, Any]]:
+        return iter(self.all.items())
 
-    def values(self):
-        return self.all.values()
-
-    def iteritems(self):
-        return six.iteritems(self.all)
-
-    def items(self):
-        return self.all.items()
-
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return self.lookup(key)
 
-    def __iter__(self):
-        return iter(self.keys())
+    def __iter__(self) -> Iterator[str]:
+        return self.keys()
 
-    def __repr__(self):
-        return ('<Facter yaml=%r cache_enabled=%r cache_active=%r>'
-                % (self.uses_yaml, self.cache_enabled,
-                   (self._cache is not None)))
+    def __repr__(self) -> str:
+        return (
+            f"<Facter yaml={self.uses_yaml!r} "
+            f"cache_enabled={self.cache_enabled!r} "
+            f"cache_active={self._cache is not None!r}>"
+        )
 
-    def json(self):
+    def json(self) -> str:
         """Return a json dump of all facts"""
-        import json
         return json.dumps(self.all)
 
 
 _FACTER = Facter()
 
-def get_fact(fact, default=None):
+def get_fact(fact: str, default: Any = None) -> Any:
     return _FACTER.get(fact, default)
