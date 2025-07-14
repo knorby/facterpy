@@ -130,7 +130,7 @@ class TestFacterIntegration:
         """Test puppet facts option."""
         # This might fail on systems without Puppet installed
         try:
-            f = Facter(get_puppet_facts=True)
+            f = Facter(puppet_facts=True)
             facts = f.all
             assert isinstance(facts, dict)
         except RuntimeError as e:

@@ -35,7 +35,7 @@ f = facter.Facter(facter_path="/usr/local/bin/facter")
 f = facter.Facter(external_dir="/etc/puppetlabs/facter/facts.d")
 
 # Include Puppet facts
-f = facter.Facter(get_puppet_facts=True)
+f = facter.Facter(puppet_facts=True)
 
 # Disable caching
 f = facter.Facter(cache_enabled=False)
