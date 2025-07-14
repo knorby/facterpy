@@ -31,7 +31,6 @@ requires-python = ">=3.8"
 dependencies = []
 
 [project.optional-dependencies]
-yaml = ["PyYAML"]
 dev = [
     "black",
     "ruff",

@@ -2,13 +2,7 @@ import json
 import logging
 import os
 import subprocess
-from typing import Any, Dict, Generator, Iterator, List, Optional, Tuple, Union
-
-try:
-    import yaml
-except ImportError:
-    logging.warning("PyYAML not available, falling back to plain text parsing")
-    yaml = None  # type: ignore[assignment]
+from typing import Any, Dict, Generator, Iterator, Optional, Tuple, Union
 
 
 def _parse_cli_facter_results(
@@ -57,57 +51,76 @@ class Facter:
         self,
         facter_path: str = "facter",
         external_dir: Optional[str] = None,
-        use_yaml: bool = True,
         cache_enabled: bool = True,
         get_puppet_facts: bool = False,
+        # Deprecated - kept for backward compatibility
+        use_yaml: Optional[bool] = None,
     ) -> None:
         self.facter_path = facter_path
         self.external_dir = external_dir
-        self._use_yaml = use_yaml
         self.cache_enabled = cache_enabled
         self._get_puppet_facts = get_puppet_facts
         self._cache: Optional[Dict[str, Any]] = None
+        
+        # Handle deprecated use_yaml parameter
+        if use_yaml is not None:
+            logging.warning(
+                "The 'use_yaml' parameter is deprecated. "
+                "facterpy now uses JSON by default with text fallback."
+            )
 
     @property
     def uses_yaml(self) -> bool:
-        """Determines if the yaml library is available and selected"""
-        return self._use_yaml and bool(yaml)
+        """Deprecated property. facterpy now uses JSON by default."""
+        logging.warning(
+            "The 'uses_yaml' property is deprecated. "
+            "facterpy now uses JSON by default with text fallback."
+        )
+        return False
 
     def run_facter(self, key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
-        """Run the facter executable with an optional specfic
-        fact. Output is parsed to yaml if available and
-        selected. Puppet facts are always selected. Returns a
-        dictionary if no key is given, and the value if a key is
-        passed."""
-        args = [self.facter_path]
-        # getting puppet facts seems to be writing data to the home directory of
-        # the run time user even when cache is not selected.
-        # The only additional fact that we can get as of now is `puppetversion.`
-        # that is available using puppet.version fact.
+        """Run the facter executable with an optional specific fact.
+        
+        Uses JSON output by default (facter 3.0+) with fallback to plain text parsing.
+        Returns a dictionary if no key is given, and the value if a key is passed.
+        """
+        base_args = [self.facter_path]
+        
+        # Add common arguments
         if self._get_puppet_facts:
-            args.append("--puppet")
+            base_args.append("--puppet")
         if self.external_dir is not None:
-            args.append("--external-dir")
-            args.append(self.external_dir)
-        if self.uses_yaml:
-            args.append("--yaml")
+            base_args.extend(["--external-dir", self.external_dir])
         if key is not None:
-            args.append(key)
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = proc.communicate()
-        if proc.returncode != 0:
-            raise RuntimeError(f"facter command failed: {stderr.decode()}")
-        results = stdout.decode()
-        if self.uses_yaml:
-            parsed_results = yaml.safe_load(results)
-            if key is not None:
-                return parsed_results[key]
-            else:
+            base_args.append(key)
+        
+        # Try JSON first (preferred)
+        json_args = base_args + ["--json"]
+        try:
+            proc = subprocess.Popen(json_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = proc.communicate()
+            if proc.returncode == 0:
+                results = stdout.decode()
+                parsed_results = json.loads(results)
+                if key is not None:
+                    return parsed_results.get(key)
                 return parsed_results
-        if key is not None:
-            return results.strip()
-        else:
+        except (json.JSONDecodeError, FileNotFoundError, subprocess.SubprocessError):
+            # Fall back to text parsing
+            pass
+        
+        # Fallback to plain text output
+        try:
+            proc = subprocess.Popen(base_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = proc.communicate()
+            if proc.returncode != 0:
+                raise RuntimeError(f"facter command failed: {stderr.decode()}")
+            results = stdout.decode()
+            if key is not None:
+                return results.strip()
             return dict(_parse_cli_facter_results(results))
+        except (FileNotFoundError, subprocess.SubprocessError) as e:
+            raise RuntimeError(f"Failed to execute facter: {e}")
 
     def build_cache(self) -> None:
         """run facter and save the results to `_cache`"""
@@ -172,8 +185,7 @@ class Facter:
 
     def __repr__(self) -> str:
         return (
-            f"<Facter yaml={self.uses_yaml!r} "
-            f"cache_enabled={self.cache_enabled!r} "
+            f"<Facter cache_enabled={self.cache_enabled!r} "
             f"cache_active={self._cache is not None!r}>"
         )
 
