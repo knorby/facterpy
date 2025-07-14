@@ -1,6 +1,5 @@
 """Basic tests to ensure the modernized code works."""
 
-import warnings
 from unittest.mock import Mock, patch
 
 import pytest
@@ -30,20 +29,46 @@ def test_facter_init() -> None:
 def test_facter_uses_yaml_deprecated() -> None:
     """Test deprecated yaml property and parameter."""
     # Test deprecated use_yaml parameter
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+    with patch("facter.log.warning") as mock_warning:
         f = Facter(use_yaml=True)
-        assert len(w) == 1
-        assert "deprecated" in str(w[0].message)
+        mock_warning.assert_called_once()
+        assert "deprecated" in mock_warning.call_args[0][0]
 
     # Test deprecated uses_yaml property
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+    with patch("facter.log.warning") as mock_warning:
         f = Facter()
         result = f.uses_yaml
         assert result is False
-        assert len(w) == 1
-        assert "deprecated" in str(w[0].message)
+        mock_warning.assert_called_once()
+        assert "deprecated" in mock_warning.call_args[0][0]
+
+
+@patch("subprocess.Popen")
+def test_run_facter_legacy_facts(mock_popen: Mock) -> None:
+    """Test that legacy_facts=True adds --show-legacy to command."""
+    mock_process = Mock()
+    mock_process.communicate.return_value = (b'{"architecture": "x86_64"}', b"")
+    mock_process.returncode = 0
+    mock_popen.return_value = mock_process
+
+    # Test with legacy_facts=True
+    f = Facter(legacy_facts=True)
+    f.run_facter()
+
+    # Check that --show-legacy was added to args
+    args = mock_popen.call_args[0][0]
+    assert "--show-legacy" in args
+    assert "--json" in args
+
+    # Test with legacy_facts=False (default)
+    mock_popen.reset_mock()
+    f_no_legacy = Facter(legacy_facts=False)
+    f_no_legacy.run_facter()
+
+    # Check that --show-legacy was NOT added
+    args = mock_popen.call_args[0][0]
+    assert "--show-legacy" not in args
+    assert "--json" in args
 
 
 @patch("subprocess.Popen")

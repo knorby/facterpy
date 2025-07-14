@@ -39,6 +39,11 @@ f = facter.Facter(get_puppet_facts=True)
 
 # Disable caching
 f = facter.Facter(cache_enabled=False)
+
+# Enable legacy facts (equivalent to facter --show-legacy)
+f = facter.Facter(legacy_facts=True)
+f.lookup("architecture")  # Works with legacy facts enabled
+f["operatingsystem"]      # Legacy facts appear in f.all
 ```
 
 Install
@@ -63,6 +68,22 @@ Compatibility
 - **Python**: 3.8+ (Python 2 support removed in v0.2.0)
 - **Facter**: 3.0+ (JSON output), with fallback support for older versions
 - **Platforms**: Linux, macOS, and other POSIX systems
+
+### Legacy Facts
+
+Modern facter (4.x+) uses structured facts, so legacy top-level facts like `architecture` are nested under structured facts like `os.architecture`. To access legacy facts that were available in older facter versions:
+
+```python
+# Modern behavior (default) - structured facts only
+f = facter.Facter()
+f.lookup("architecture")  # Raises KeyError - not in structured output
+f.all["os"]["architecture"]  # Works - nested in structured facts
+
+# Legacy behavior - includes legacy facts (like facter --show-legacy)
+f = facter.Facter(legacy_facts=True)
+f.lookup("architecture")  # Works - legacy fact available
+f["architecture"]  # Works - appears in f.all output
+```
 
 Migration from v0.1.x
 ---------------------

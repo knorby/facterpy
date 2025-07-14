@@ -55,6 +55,7 @@ class Facter:
         external_dir: Optional[str] = None,
         cache_enabled: bool = True,
         get_puppet_facts: bool = False,
+        legacy_facts: bool = False,
         # Deprecated - kept for backward compatibility
         use_yaml: Optional[bool] = None,
     ) -> None:
@@ -62,6 +63,7 @@ class Facter:
         self.external_dir = external_dir
         self.cache_enabled = cache_enabled
         self._get_puppet_facts = get_puppet_facts
+        self.legacy_facts = legacy_facts
         self._cache: Optional[Dict[str, Any]] = None
 
         # Handle deprecated use_yaml parameter
@@ -85,6 +87,11 @@ class Facter:
 
         Uses JSON output by default (facter 3.0+) with fallback to plain text parsing.
         Returns a dictionary if no key is given, and the value if a key is passed.
+
+        If legacy_facts=True, includes legacy facts (like facter --show-legacy).
+        This is required for lookup() to find legacy facts like 'architecture' that
+        don't appear in modern structured fact output but work with individual
+        facter commands (e.g., 'facter architecture').
         """
         base_args = [self.facter_path]
 
@@ -93,6 +100,8 @@ class Facter:
             base_args.append("--puppet")
         if self.external_dir is not None:
             base_args.extend(["--external-dir", self.external_dir])
+        if self.legacy_facts:
+            base_args.append("--show-legacy")
         if key is not None:
             base_args.append(key)
 
