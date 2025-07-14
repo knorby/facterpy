@@ -1,65 +1,113 @@
 facterpy
 ========
 
-Python library to provide a cached and dictionary-like interface to [Puppet's facter utility](http://puppetlabs.com/puppet/related-projects/facter). 
+Python library to provide a cached and dictionary-like interface to [Puppet's facter utility](http://puppetlabs.com/puppet/related-projects/facter).
 
-The facter script is run to gather facts, and YAML output is used if pyYAML is installed.
-
-The library is compatibile with Python 2 and Python 3 and *nix and OS X, although testing hasn't been extensive. 
+The library uses JSON output by default (facter 3.0+) with automatic fallback to plain text parsing for maximum compatibility and performance.
 
 Usage
-------
+-----
 
-```
+```python
 >>> import facter
 >>> f = facter.Facter()
 >>> f["architecture"]
 'x86_64'
 >>> f.lookup("uptime_seconds")
 195106
->>> f.lookup("uptime_seconds")
+>>> f.lookup("uptime_seconds")  # cached result
 195106
->>> f.lookup("uptime_seconds", cache=False)
+>>> f.lookup("uptime_seconds", cache=False)  # force refresh
 195234
->>> f = facter.Facter(use_yaml=False)
->>> f.lookup("uptime_seconds")
-'195301'
->>> f.get("not a fact", "mere opinion")
-'mere opinion'
+>>> f.get("not_a_fact", "default_value")
+'default_value'
+>>> f.all  # get all facts as dictionary
+{'architecture': 'x86_64', 'uptime_seconds': 195234, ...}
 ```
 
-More methods exist. Documentation to come.
+### Advanced Usage
+
+```python
+# Custom facter path
+f = facter.Facter(facter_path="/usr/local/bin/facter")
+
+# External facts directory
+f = facter.Facter(external_dir="/etc/puppetlabs/facter/facts.d")
+
+# Include Puppet facts
+f = facter.Facter(get_puppet_facts=True)
+
+# Disable caching
+f = facter.Facter(cache_enabled=False)
+
+# Enable legacy facts (equivalent to facter --show-legacy)
+f = facter.Facter(legacy_facts=True)
+f.lookup("architecture")  # Works with legacy facts enabled
+f["operatingsystem"]      # Legacy facts appear in f.all
+```
 
 Install
----------
+-------
 
+```bash
+pip install facterpy
 ```
-pip install facter
-```
-
-or 
-
-```
-pip install facter[yaml]
-```
-
-to include pyYAML
 
 Requirements
+------------
+
+**Required:**
+- Python 3.8+
+- `facter` command-line utility (install via system packages or Puppet)
+
+**No external Python dependencies** - uses only Python standard library.
+
+Compatibility
 -------------
 
-Required:
+- **Python**: 3.8+ (Python 2 support removed in v0.2.0)
+- **Facter**: 3.0+ (JSON output), with fallback support for older versions
+- **Platforms**: Linux, macOS, and other POSIX systems
 
-- facter - must be installed through system packages or Ruby Gems
-- [six](https://pypi.python.org/pypi/six/) - Python 2 and 3 compatibility (marked in setup.py)
+### Legacy Facts
 
-Optional:
+Modern facter (4.x+) uses structured facts, so legacy top-level facts like `architecture` are nested under structured facts like `os.architecture`. To access legacy facts that were available in older facter versions:
 
-- [pyYAML](http://pyyaml.org/wiki/PyYAML) - For YAML parsing of results
+```python
+# Modern behavior (default) - structured facts only
+f = facter.Facter()
+f.lookup("architecture")  # Raises KeyError - not in structured output
+f.all["os"]["architecture"]  # Works - nested in structured facts
 
+# Legacy behavior - includes legacy facts (like facter --show-legacy)
+f = facter.Facter(legacy_facts=True)
+f.lookup("architecture")  # Works - legacy fact available
+f["architecture"]  # Works - appears in f.all output
+```
+
+Migration from v0.1.x
+---------------------
+
+**Version 1.0.0 represents a major modernization** while maintaining API compatibility. This version bump reflects the significant gap since the last release (12+ years) and commitment to not breaking existing code.
+
+- **Breaking changes**: Python 2 support removed, PyYAML dependency removed
+- **Modernization**: Complete rewrite with JSON-first approach, type hints, modern tooling
+- **API stability**: Core API unchanged to preserve compatibility with existing code
+
+**Migration notes:**
+
+```python
+# Old (deprecated, shows warning)
+f = facter.Facter(use_yaml=False)
+
+# New (recommended)
+f = facter.Facter()  # Automatically uses JSON with text fallback
+
+# For legacy fact compatibility (if needed)
+f = facter.Facter(legacy_facts=True)  # Includes pre-4.x style facts
+```
 
 Project State
---------------
+-------------
 
-This is an alpha/early version and it hasn't been tested much. Please report any issues observed.
-
+I wrote this library in 2013 and did very little maintenance since then, despite some apparent usage. The library is simple and focused, which has helped it remain functional. This 1.0.0 modernization brings it up to current standards while preserving the original API. I haven't used Puppet in quite some time, so I'm not an active user of this library, but the comprehensive test suite should help ensure reliability.

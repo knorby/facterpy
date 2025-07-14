@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install facter
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y facter
+        # Verify facter is working and check version
+        facter --version
+        facter architecture
+        # Test JSON support
+        facter --json architecture || echo "JSON not supported, will test fallback"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev,yaml]
+
+    - name: Lint with ruff
+      run: ruff check .
+
+    - name: Check formatting with black
+      run: black --check .
+
+    - name: Type check with mypy
+      run: mypy facter/
+
+    - name: Run unit tests
+      run: pytest tests/test_facter.py -v
+
+    - name: Run integration tests
+      run: pytest tests/test_integration.py -v
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - uses: pre-commit/action@v3.0.1
