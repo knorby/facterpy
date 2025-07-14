@@ -1,7 +1,7 @@
 """Basic tests to ensure the modernized code works."""
 
-from unittest.mock import Mock, patch
 import warnings
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -35,7 +35,7 @@ def test_facter_uses_yaml_deprecated() -> None:
         f = Facter(use_yaml=True)
         assert len(w) == 1
         assert "deprecated" in str(w[0].message)
-    
+
     # Test deprecated uses_yaml property
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
@@ -53,11 +53,11 @@ def test_run_facter_json_success(mock_popen: Mock) -> None:
     mock_process.communicate.return_value = (b'{"architecture": "x86_64"}', b"")
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
-    
+
     f = Facter()
     result = f.run_facter()
     assert result == {"architecture": "x86_64"}
-    
+
     # Check that --json was added to args
     args = mock_popen.call_args[0][0]
     assert "--json" in args
@@ -70,13 +70,13 @@ def test_run_facter_fallback_to_text(mock_popen: Mock) -> None:
     mock_process_json = Mock()
     mock_process_json.communicate.return_value = (b"", b"json not supported")
     mock_process_json.returncode = 1
-    
+
     mock_process_text = Mock()
     mock_process_text.communicate.return_value = (b"architecture => x86_64\n", b"")
     mock_process_text.returncode = 0
-    
+
     mock_popen.side_effect = [mock_process_json, mock_process_text]
-    
+
     f = Facter()
     result = f.run_facter()
     assert result == {"architecture": "x86_64"}
@@ -89,7 +89,7 @@ def test_run_facter_complete_failure(mock_popen: Mock) -> None:
     mock_process.communicate.return_value = (b"", b"error message")
     mock_process.returncode = 1
     mock_popen.return_value = mock_process
-    
+
     f = Facter()
     with pytest.raises(RuntimeError, match="facter command failed"):
         f.run_facter()

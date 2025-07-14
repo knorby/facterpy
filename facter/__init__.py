@@ -4,6 +4,8 @@ import os
 import subprocess
 from typing import Any, Dict, Generator, Iterator, Optional, Tuple, Union
 
+log = logging.getLogger("facter")
+
 
 def _parse_cli_facter_results(
     facter_results: str,
@@ -61,10 +63,10 @@ class Facter:
         self.cache_enabled = cache_enabled
         self._get_puppet_facts = get_puppet_facts
         self._cache: Optional[Dict[str, Any]] = None
-        
+
         # Handle deprecated use_yaml parameter
         if use_yaml is not None:
-            logging.warning(
+            log.warning(
                 "The 'use_yaml' parameter is deprecated. "
                 "facterpy now uses JSON by default with text fallback."
             )
@@ -72,7 +74,7 @@ class Facter:
     @property
     def uses_yaml(self) -> bool:
         """Deprecated property. facterpy now uses JSON by default."""
-        logging.warning(
+        log.warning(
             "The 'uses_yaml' property is deprecated. "
             "facterpy now uses JSON by default with text fallback."
         )
@@ -80,12 +82,12 @@ class Facter:
 
     def run_facter(self, key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
         """Run the facter executable with an optional specific fact.
-        
+
         Uses JSON output by default (facter 3.0+) with fallback to plain text parsing.
         Returns a dictionary if no key is given, and the value if a key is passed.
         """
         base_args = [self.facter_path]
-        
+
         # Add common arguments
         if self._get_puppet_facts:
             base_args.append("--puppet")
@@ -93,11 +95,13 @@ class Facter:
             base_args.extend(["--external-dir", self.external_dir])
         if key is not None:
             base_args.append(key)
-        
+
         # Try JSON first (preferred)
         json_args = base_args + ["--json"]
         try:
-            proc = subprocess.Popen(json_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc = subprocess.Popen(
+                json_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
             stdout, stderr = proc.communicate()
             if proc.returncode == 0:
                 results = stdout.decode()
@@ -108,10 +112,12 @@ class Facter:
         except (json.JSONDecodeError, FileNotFoundError, subprocess.SubprocessError):
             # Fall back to text parsing
             pass
-        
+
         # Fallback to plain text output
         try:
-            proc = subprocess.Popen(base_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc = subprocess.Popen(
+                base_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
             stdout, stderr = proc.communicate()
             if proc.returncode != 0:
                 raise RuntimeError(f"facter command failed: {stderr.decode()}")
@@ -119,8 +125,9 @@ class Facter:
             if key is not None:
                 return results.strip()
             return dict(_parse_cli_facter_results(results))
-        except (FileNotFoundError, subprocess.SubprocessError) as e:
-            raise RuntimeError(f"Failed to execute facter: {e}")
+        except (FileNotFoundError, subprocess.SubprocessError):
+            log.exception("Facter execution failed")
+            raise
 
     def build_cache(self) -> None:
         """run facter and save the results to `_cache`"""
