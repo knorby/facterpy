@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "facterpy"
-version = "0.2.0"
+version = "1.0.0"
 description = "Python library to provide a cached and dictionary-like interface to Puppet's facter utility"
 readme = "README.md"
 license = {text = "BSD-3-Clause"}

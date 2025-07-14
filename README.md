@@ -88,7 +88,13 @@ f["architecture"]  # Works - appears in f.all output
 Migration from v0.1.x
 ---------------------
 
-The `use_yaml` parameter is deprecated but still supported with a warning:
+**Version 1.0.0 represents a major modernization** while maintaining API compatibility. This version bump reflects the significant gap since the last release (12+ years) and commitment to not breaking existing code.
+
+- **Breaking changes**: Python 2 support removed, PyYAML dependency removed
+- **Modernization**: Complete rewrite with JSON-first approach, type hints, modern tooling
+- **API stability**: Core API unchanged to preserve compatibility with existing code
+
+**Migration notes:**
 
 ```python
 # Old (deprecated, shows warning)
@@ -96,9 +102,12 @@ f = facter.Facter(use_yaml=False)
 
 # New (recommended)
 f = facter.Facter()  # Automatically uses JSON with text fallback
+
+# For legacy fact compatibility (if needed)
+f = facter.Facter(legacy_facts=True)  # Includes pre-4.x style facts
 ```
 
 Project State
 -------------
 
-I've done very little to maintain this library since initally writing it (sorry!), but it is very simple and has some apparent usage. It is modernized in v0.2.0+, and I will look to make a v1.0.0 release at some point soon. I haven't used Puppet in quite some time, so I'm not an active user of this library.
+I wrote this library in 2013 and did very little maintenance since then, despite some apparent usage. The library is simple and focused, which has helped it remain functional. This 1.0.0 modernization brings it up to current standards while preserving the original API. I haven't used Puppet in quite some time, so I'm not an active user of this library, but the comprehensive test suite should help ensure reliability.
