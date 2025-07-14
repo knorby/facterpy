@@ -38,10 +38,10 @@ def _parse_cli_facter_results(
             if not last_key:
                 raise ValueError("parse error")
             # Continue multiline value
-            last_value.append(res[0])
+            last_value.append(res[0])  # type: ignore[unreachable] # mypy 3.8 compat
         else:
             if last_key:
-                yield last_key, os.linesep.join(last_value)
+                yield last_key, os.linesep.join(last_value)  # type: ignore[unreachable] # mypy 3.8 compat
             last_key, last_value = res[0], [res[1]]
 
     # Yield final key-value pair if exists
