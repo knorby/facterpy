@@ -55,7 +55,7 @@ class Facter:
         facter_path: str = "facter",
         external_dir: Optional[str] = None,
         cache_enabled: bool = True,
-        get_puppet_facts: bool = False,
+        puppet_facts: bool = False,
         legacy_facts: bool = False,
         # Deprecated - kept for backward compatibility
         use_yaml: Optional[bool] = None,
@@ -63,7 +63,7 @@ class Facter:
         self.facter_path = facter_path
         self.external_dir = external_dir
         self.cache_enabled = cache_enabled
-        self._get_puppet_facts = get_puppet_facts
+        self.puppet_facts = puppet_facts
         self.legacy_facts = legacy_facts
         self._cache: Optional[Dict[str, Any]] = None
 
@@ -97,7 +97,7 @@ class Facter:
         base_args = [self.facter_path]
 
         # Add common arguments
-        if self._get_puppet_facts:
+        if self.puppet_facts:
             base_args.append("--puppet")
         if self.external_dir is not None:
             base_args.extend(["--external-dir", self.external_dir])
