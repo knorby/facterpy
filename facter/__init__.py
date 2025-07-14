@@ -37,15 +37,16 @@ def _parse_cli_facter_results(
         if len(res) == 1:
             if not last_key:
                 raise ValueError("parse error")
-            else:
-                last_value.append(res[0])
+            # Continue multiline value
+            last_value.append(res[0])
         else:
             if last_key:
                 yield last_key, os.linesep.join(last_value)
             last_key, last_value = res[0], [res[1]]
-    else:
-        if last_key:
-            yield last_key, os.linesep.join(last_value)
+
+    # Yield final key-value pair if exists
+    if last_key:
+        yield last_key, os.linesep.join(last_value)
 
 
 class Facter:
