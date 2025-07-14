@@ -25,6 +25,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y facter
+        # Verify facter is working and check version
+        facter --version
+        facter architecture
+        # Test JSON support
+        facter --json architecture || echo "JSON not supported, will test fallback"
 
     - name: Install dependencies
       run: |
@@ -40,8 +45,11 @@ jobs:
     - name: Type check with mypy
       run: mypy facter/
 
-    - name: Test with pytest
-      run: pytest
+    - name: Run unit tests
+      run: pytest tests/test_facter.py -v
+
+    - name: Run integration tests
+      run: pytest tests/test_integration.py -v
 
   pre-commit:
     runs-on: ubuntu-latest
