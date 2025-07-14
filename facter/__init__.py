@@ -11,7 +11,7 @@ def _parse_cli_facter_results(
     facter_results: str,
 ) -> Generator[Tuple[str, str], None, None]:
     '''Parse key value pairs printed with "=>" separators.
-    YAML is preferred output scheme for facter.
+    Used as fallback when JSON output is not available.
 
     >>> list(_parse_cli_facter_results("""foo => bar
     ... baz => 1
