@@ -1,15 +1,14 @@
-name: Build and Publish to PyPI
+name: Create GitHub Release
 
 on:
-  workflow_dispatch:  # Manual trigger from GitHub Actions UI
+  workflow_dispatch:
 
 jobs:
-  build-and-publish:
-    name: Build and Publish
+  create-release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write  # Required for trusted publishing to PyPI
     steps:
     - uses: actions/checkout@v4
 
@@ -49,11 +48,8 @@ jobs:
         git tag ${{ steps.version.outputs.TAG }}
         git push origin ${{ steps.version.outputs.TAG }}
 
-    - name: Build source distribution and wheel
+    - name: Build distributions for release assets
       run: python -m build
-
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
 
     - name: Create GitHub Release
       env:
