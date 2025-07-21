@@ -1,0 +1,67 @@
+name: Build and Publish to PyPI
+
+on:
+  workflow_dispatch:  # Manual trigger from GitHub Actions UI
+
+jobs:
+  build-and-publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write  # Required for trusted publishing to PyPI
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build tomli
+
+    - name: Extract version from pyproject.toml
+      id: version
+      run: |
+        python -c "
+        import tomli
+        with open('pyproject.toml', 'rb') as f:
+            data = tomli.load(f)
+        version = data['project']['version']
+        print(f'VERSION={version}')
+        print(f'TAG=v{version}')
+        " >> $GITHUB_OUTPUT
+
+    - name: Check if tag already exists
+      run: |
+        if git rev-parse "refs/tags/${{ steps.version.outputs.TAG }}" >/dev/null 2>&1; then
+          echo "Tag ${{ steps.version.outputs.TAG }} already exists!"
+          exit 1
+        fi
+
+    - name: Create and push tag
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.version.outputs.TAG }}
+        git push origin ${{ steps.version.outputs.TAG }}
+
+    - name: Build source distribution and wheel
+      run: python -m build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: >-
+        gh release create
+        '${{ steps.version.outputs.TAG }}'
+        --title 'facterpy ${{ steps.version.outputs.VERSION }}'
+        --notes 'Release ${{ steps.version.outputs.VERSION }} of facterpy'
+        --generate-notes
+        dist/*
