@@ -10,25 +10,25 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
-        python-version: '3.11'
+        python-version: '3.13'
 
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install build tomli
+        python -m pip install build
 
     - name: Extract version from pyproject.toml
       id: version
       run: |
         python -c "
-        import tomli
+        import tomllib
         with open('pyproject.toml', 'rb') as f:
-            data = tomli.load(f)
+            data = tomllib.load(f)
         version = data['project']['version']
         print(f'VERSION={version}')
         print(f'TAG=v{version}')

@@ -2,14 +2,15 @@ import json
 import logging
 import os
 import subprocess
-from typing import Any, Dict, Generator, Iterator, Optional, Tuple, Union
+from collections.abc import Generator, Iterator
+from typing import Any
 
 log = logging.getLogger("facter")
 
 
 def _parse_cli_facter_results(
     facter_results: str,
-) -> Generator[Tuple[str, str], None, None]:
+) -> Generator[tuple[str, str], None, None]:
     '''Parse key value pairs printed with "=>" separators.
     Used as fallback when JSON output is not available.
 
@@ -20,32 +21,32 @@ def _parse_cli_facter_results(
     >>> list(_parse_cli_facter_results("""foo => bar
     ... babababababababab
     ... baz => 2"""))
-    [('foo', 'bar\nbabababababababab'), ('baz', '2')]
+    [('foo', 'bar\\nbabababababababab'), ('baz', '2')]
     >>> list(_parse_cli_facter_results("""3434"""))
     Traceback (most recent call last):
         ...
     ValueError: parse error
 
-
     Uses a generator interface:
-    >>> _parse_cli_facter_results("foo => bar").next()
+    >>> next(_parse_cli_facter_results("foo => bar"))
     ('foo', 'bar')
     '''
-    last_key, last_value = None, []
+    last_key: str | None = None
+    last_value: list[str] = []
     for line in filter(None, facter_results.splitlines()):
         res = line.split(" => ", 1)
         if len(res) == 1:
-            if not last_key:
+            if last_key is None:
                 raise ValueError("parse error")
             # Continue multiline value
-            last_value.append(res[0])  # type: ignore[unreachable] # mypy 3.8 compat
+            last_value.append(res[0])
         else:
-            if last_key:
-                yield last_key, os.linesep.join(last_value)  # type: ignore[unreachable] # mypy 3.8 compat
+            if last_key is not None:
+                yield last_key, os.linesep.join(last_value)
             last_key, last_value = res[0], [res[1]]
 
     # Yield final key-value pair if exists
-    if last_key:
+    if last_key is not None:
         yield last_key, os.linesep.join(last_value)
 
 
@@ -53,19 +54,21 @@ class Facter:
     def __init__(
         self,
         facter_path: str = "facter",
-        external_dir: Optional[str] = None,
+        external_dir: str | None = None,
         cache_enabled: bool = True,
         puppet_facts: bool = False,
         legacy_facts: bool = False,
+        timeout: float = 30.0,
         # Deprecated - kept for backward compatibility
-        use_yaml: Optional[bool] = None,
+        use_yaml: bool | None = None,
     ) -> None:
         self.facter_path = facter_path
         self.external_dir = external_dir
         self.cache_enabled = cache_enabled
         self.puppet_facts = puppet_facts
         self.legacy_facts = legacy_facts
-        self._cache: Optional[Dict[str, Any]] = None
+        self.timeout = timeout
+        self._cache: dict[str, Any] | None = None
 
         # Handle deprecated use_yaml parameter
         if use_yaml is not None:
@@ -83,7 +86,21 @@ class Facter:
         )
         return False
 
-    def run_facter(self, key: Optional[str] = None) -> Union[Dict[str, Any], Any]:
+    def _run_command(self, args: list[str]) -> subprocess.CompletedProcess[str]:
+        """Run a facter command, returning the completed process.
+
+        Raises subprocess.TimeoutExpired if the command exceeds
+        self.timeout seconds.
+        """
+        return subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=self.timeout,
+        )
+
+    def run_facter(self, key: str | None = None) -> dict[str, Any] | Any:
         """Run the facter executable with an optional specific fact.
 
         Uses JSON output by default (facter 3.0+) with fallback to plain text parsing.
@@ -93,6 +110,9 @@ class Facter:
         This is required for lookup() to find legacy facts like 'architecture' that
         don't appear in modern structured fact output but work with individual
         facter commands (e.g., 'facter architecture').
+
+        Raises subprocess.TimeoutExpired if facter does not finish within
+        the configured timeout (default 30 seconds).
         """
         base_args = [self.facter_path]
 
@@ -109,32 +129,28 @@ class Facter:
         # Try JSON first (preferred)
         json_args = base_args + ["--json"]
         try:
-            proc = subprocess.Popen(
-                json_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-            stdout, stderr = proc.communicate()
+            proc = self._run_command(json_args)
             if proc.returncode == 0:
-                results = stdout.decode()
-                parsed_results = json.loads(results)
+                parsed_results = json.loads(proc.stdout)
                 if key is not None:
                     return parsed_results.get(key)
                 return parsed_results
+        except subprocess.TimeoutExpired:
+            # No point falling back - the text path would hang too
+            raise
         except (json.JSONDecodeError, FileNotFoundError, subprocess.SubprocessError):
             # Fall back to text parsing
             pass
 
         # Fallback to plain text output
         try:
-            proc = subprocess.Popen(
-                base_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
-            stdout, stderr = proc.communicate()
+            proc = self._run_command(base_args)
             if proc.returncode != 0:
-                raise RuntimeError(f"facter command failed: {stderr.decode()}")
-            results = stdout.decode()
+                raise RuntimeError(f"facter command failed: {proc.stderr}")
+            results = proc.stdout
             if key is not None:
-                return results.strip()
-            return dict(_parse_cli_facter_results(results))
+                return results.strip() if results is not None else None
+            return dict(_parse_cli_facter_results(results or ""))
         except (FileNotFoundError, subprocess.SubprocessError):
             log.exception("Facter execution failed")
             raise
@@ -178,7 +194,7 @@ class Facter:
             return d
 
     @property
-    def all(self) -> Dict[str, Any]:
+    def all(self) -> dict[str, Any]:
         """Dictionary representation of all facts"""
         if not self.has_cache():
             result = self.run_facter()
@@ -191,7 +207,7 @@ class Facter:
     def values(self) -> Iterator[Any]:
         return iter(self.all.values())
 
-    def items(self) -> Iterator[Tuple[str, Any]]:
+    def items(self) -> Iterator[tuple[str, Any]]:
         return iter(self.all.items())
 
     def __getitem__(self, key: str) -> Any:

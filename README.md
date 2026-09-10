@@ -43,7 +43,7 @@ f = facter.Facter(cache_enabled=False)
 # Enable legacy facts (equivalent to facter --show-legacy)
 f = facter.Facter(legacy_facts=True)
 f.lookup("architecture")  # Works with legacy facts enabled
-f["operatingsystem"]      # Legacy facts appear in f.all
+f["operatingsystem"]  # Legacy facts appear in f.all
 ```
 
 Install
@@ -57,7 +57,7 @@ Requirements
 ------------
 
 **Required:**
-- Python 3.8+
+- Python 3.11+
 - `facter` command-line utility (install via system packages or Puppet)
 
 **No external Python dependencies** - uses only Python standard library.
@@ -65,7 +65,7 @@ Requirements
 Compatibility
 -------------
 
-- **Python**: 3.8+ (Python 2 support removed in v0.2.0)
+- **Python**: 3.11+ (Python 2 support removed in v0.2.0, Python 3.8-3.10 support removed in v1.1.0)
 - **Facter**: 3.0+ (JSON output), with fallback support for older versions
 - **Platforms**: Linux, macOS, and other POSIX systems
 
@@ -88,7 +88,7 @@ f["architecture"]  # Works - appears in f.all output
 Migration from v0.1.x
 ---------------------
 
-**Version 1.0.0 represents a major modernization** while maintaining API compatibility. This version bump reflects the significant gap since the last release (12+ years) and commitment to not breaking existing code.
+**Version 1.0.0 represented a major modernization** while maintaining API compatibility. This version bump reflects the significant gap since the last release (12+ years) and commitment to not breaking existing code.
 
 - **Breaking changes**: Python 2 support removed, PyYAML dependency removed
 - **Modernization**: Complete rewrite with JSON-first approach, type hints, modern tooling
@@ -106,6 +106,13 @@ f = facter.Facter()  # Automatically uses JSON with text fallback
 # For legacy fact compatibility (if needed)
 f = facter.Facter(legacy_facts=True)  # Includes pre-4.x style facts
 ```
+
+Changes in v1.1.0
+-----------------
+
+- **Dropped Python 3.8-3.10** (all end-of-life); the minimum is now Python 3.11
+- **Added a `timeout` parameter** (default 30 seconds) to `Facter()`. A hung `facter` process now raises `subprocess.TimeoutExpired` instead of blocking forever
+- Tooling modernization: ruff-format replaces black, coverage no longer forced on every test run
 
 Project State
 -------------
