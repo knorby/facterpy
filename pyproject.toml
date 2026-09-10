@@ -1,44 +1,40 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "facterpy"
-version = "1.0.0"
+version = "1.1.0"
 description = "Python library to provide a cached and dictionary-like interface to Puppet's facter utility"
 readme = "README.md"
-license = {text = "BSD-3-Clause"}
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 authors = [
     {name = "Kali Norby"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: BSD License",
     "Topic :: System :: Systems Administration",
     "Intended Audience :: System Administrators",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 keywords = ["facter", "puppet", "ruby", "system", "facts"]
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
 dev = [
-    "black",
-    "ruff",
     "mypy",
+    "pre-commit",
     "pytest",
     "pytest-cov",
-    "pre-commit",
-    "tox",
+    "ruff",
 ]
 
 [project.urls]
@@ -50,12 +46,8 @@ Issues = "https://github.com/knorby/facterpy/issues"
 where = ["."]
 include = ["facter*"]
 
-[tool.black]
-line-length = 88
-target-version = ['py38']
-
 [tool.ruff]
-target-version = "py38"
+target-version = "py311"
 line-length = 88
 
 [tool.ruff.lint]
@@ -74,7 +66,7 @@ ignore = []
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -93,11 +85,11 @@ module = "tests.*"
 disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "facter"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=facter --cov-report=term-missing --cov-report=html"
+addopts = "--doctest-modules"
 
 [tool.coverage.run]
 source = ["facter"]
